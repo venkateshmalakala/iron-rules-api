@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Gym {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  capacity  Int
+  address   Json
+  members   Enrollment[]
+  trainers  TrainerAssignment[]
+
+  @@map("gyms")
+}
+
+model Member {
+  id             String         @id @default(cuid())
+  name           String
+  enrollments    Enrollment[]
+  healthMetrics  HealthMetric[]
+  workouts       Workout[]
+
+  @@map("members")
+}
+
+model Enrollment {
+  id             String   @id @default(cuid())
+  memberId       String
+  gymId          String
+  membershipTier String
+  member         Member   @relation(fields: [memberId], references: [id])
+  gym            Gym      @relation(fields: [gymId], references: [id])
+
+  @@unique([memberId, gymId])
+  @@map("enrollments")
+}
+
+model HealthMetric {
+  id        String   @id @default(cuid())
+  memberId  String
+  type      String   // 'heart_rate' | 'weight'
+  value     Float
+  createdAt DateTime @default(now())
+  member    Member   @relation(fields: [memberId], references: [id])
+
+  @@map("health_metrics")
+}
+
+model Trainer {
+  id            String              @id @default(cuid())
+  name          String
+  certification String              // e.g., 'basic', 'advanced'
+  expiryDate    DateTime
+  assignments   TrainerAssignment[]
+
+  @@map("trainers")
+}
+
+model TrainerAssignment {
+  id        String  @id @default(cuid())
+  trainerId String
+  gymId     String
+  trainer   Trainer @relation(fields: [trainerId], references: [id])
+  gym       Gym     @relation(fields: [gymId], references: [id])
+
+  @@unique([trainerId, gymId])
+  @@map("trainer_assignments")
+}
+
+model Workout {
+  id        String   @id @default(cuid())
+  memberId  String
+  type      String   // 'strength' | 'cardio'
+  data      Json
+  createdAt DateTime @default(now())
+  member    Member   @relation(fields: [memberId], references: [id])
+
+  @@map("workouts")
+}
