@@ -143,14 +143,8 @@ This guide provides specific actions and expected JSON outputs to verify that th
         }
         ```
 
----
 
-## ️ Evaluator Tips
 
-*   **Port:** The API runs on `3000` inside the Docker container.
-*   **Prefix:** All endpoints are prefixed with `/api`.
-
----
 
 ## Tech Stack
 
