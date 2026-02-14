@@ -11,6 +11,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/fitness?schema=public
       - NODE_ENV=production
+      - PGPASSWORD=password  
     # Automates schema push and seeding before starting the API server
     command: sh -c "npx prisma db push && npm run seed && npm run start"
 
