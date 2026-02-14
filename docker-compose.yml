@@ -26,7 +26,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Mounts the seed file for the Postgres initialization script
-      - ./prisma/seed.sql:/docker-entrypoint-initdb.d/seed.sql 
+      #- ./prisma/seed.sql:/docker-entrypoint-initdb.d/seed.sql 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d fitness"]
       interval: 10s
