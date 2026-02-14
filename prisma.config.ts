@@ -5,6 +5,8 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
+    // Add this line to tell Prisma how to run your seed file
+    seed: 'psql -U user -d fitness -h db -f prisma/seed.sql',
   },
   datasource: {
     /**
