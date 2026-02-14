@@ -1,41 +1,55 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
+import { Prisma } from '@prisma/client';
+
+type TrainerWithAssignments = Prisma.TrainerGetPayload<{
+  include: { assignments: true }
+}>;
 
 export const assignTrainer = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // FIX: Cast trainerId as string
     const trainerId = req.params.trainerId as string;
     const { gymId } = req.body;
 
-    // FIX: Include _count in the query to satisfy Requirement 7
-    const trainer = await prisma.trainer.findUnique({
-      where: { id: trainerId },
-      include: { 
-        _count: { select: { assignments: true } } 
-      }
-    });
-
-    if (!trainer) return res.status(404).json({ success: false, message: "Trainer not found" });
-
-    // Check Certification Expiry
-    if (new Date(trainer.expiryDate) < new Date()) {
-      return res.status(400).json({ success: false, message: "Certification expired" });
+    if (typeof gymId !== 'string') {
+      const error = new Error('Gym ID must be a string');
+      (error as any).statusCode = 400;
+      throw error;
     }
 
-    // Check Limits (Requirement 7)
-    const limit = trainer.certification === 'advanced' ? 3 : 1;
-    if (trainer._count.assignments >= limit) {
-      return res.status(400).json({ success: false, message: "Assignment limit reached" });
-    }
+    const assignment = await prisma.$transaction(async (tx) => {
+      const trainer = await tx.trainer.findUnique({
+        where: { id: trainerId },
+        include: { assignments: true },
+      }) as TrainerWithAssignments | null;
 
-    const assignment = await prisma.trainerAssignment.create({
-      data: { 
-        trainerId, 
-        gymId: gymId as string // Cast gymId as string
+      if (!trainer) {
+        const error = new Error('Trainer not found');
+        (error as any).statusCode = 404;
+        throw error;
       }
+
+      if (new Date(trainer.expiryDate) < new Date()) {
+        const error = new Error('Trainer certification has expired');
+        (error as any).statusCode = 400;
+        throw error;
+      }
+
+      const currentCount = trainer.assignments.length;
+      const limit = trainer.certification.toLowerCase() === 'advanced' ? 3 : 1;
+
+      if (currentCount >= limit) {
+        const error = new Error(`Trainer limit reached (${limit} max)`);
+        (error as any).statusCode = 400;
+        throw error;
+      }
+
+      return tx.trainerAssignment.create({
+        data: { trainerId, gymId },
+      });
     });
 
-    res.status(201).json(assignment);
+    res.status(201).json({ success: true, data: assignment });
   } catch (error) {
     next(error);
   }

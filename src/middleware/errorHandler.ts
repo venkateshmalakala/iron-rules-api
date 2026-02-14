@@ -1,56 +1,53 @@
-import { ErrorRequestHandler } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
 
-export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
-  // 1. Handle Zod (Runtime) Validation Errors
+/**
+ * Custom Error interface to handle status codes safely
+ */
+interface AppError extends Error {
+  statusCode?: number;
+}
+
+/**
+ * Requirement 5: Standard Error Contract.
+ * Ensures all validation failures conform to the mandatory JSON structure.
+ */
+export const errorHandler = (
+  err: unknown, 
+  req: Request, 
+  res: Response, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  next: NextFunction
+) => {
+  // 1. Handle Zod Validation Errors (Application Runtime Layer)
   if (err instanceof ZodError) {
     return res.status(400).json({
       success: false,
       error: {
         layer: 'runtime',
-        // Use .issues instead of .errors for better compatibility
+        // FIX: Use .issues instead of .errors to fix the TS error
         errors: err.issues.map((e) => ({
           field: e.path.join('.'),
           rule: e.code,
           message: e.message,
-          value: req.body && e.path[0] ? req.body[e.path[0]] : 'N/A',
+          value: (req.body && e.path[0]) ? req.body[e.path[0] as string] : 'unknown',
         })),
       },
     });
   }
 
-  // 2. Handle Prisma (Database) Constraint Errors
+  // 2. Handle Prisma Known Request Errors (Database Layer)
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    if (err.code === 'P2002') {
-      return res.status(400).json({
-        success: false,
-        error: {
-          layer: 'database',
-          errors: [
-            {
-              field: (err.meta?.target as string[])?.join('.') || 'unique_field',
-              rule: 'unique',
-              message: 'Unique constraint failed',
-              value: 'conflict',
-            },
-          ],
-        },
-      });
-    }
-  }
-
-  // 3. Handle Application Errors
-  if (err instanceof Error) {
     return res.status(400).json({
       success: false,
       error: {
-        layer: 'application',
+        layer: 'database',
         errors: [
           {
-            field: 'N/A',
-            rule: 'N/A',
-            message: err.message,
+            field: err.meta?.target ? String(err.meta.target) : 'database',
+            rule: err.code,
+            message: 'Database constraint violation',
             value: 'N/A',
           },
         ],
@@ -58,5 +55,13 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     });
   }
 
-  return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  // 3. Handle General Application Errors safely
+  const isAppError = err instanceof Error;
+  const statusCode = (err as AppError).statusCode || 500;
+  const message = isAppError ? err.message : 'Internal Server Error';
+
+  return res.status(statusCode).json({
+    success: false,
+    message: message,
+  });
 };
