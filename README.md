@@ -15,7 +15,7 @@ The entire environment is containerized and automated. You do not need to run ma
    git clone [https://github.com/venkateshmalakala/iron-rules-api.git](https://github.com/venkateshmalakala/iron-rules-api.git)
    cd iron-rules-api
    ```
-   
+
 2. **Start the system:**
    ```bash
    docker-compose up --build
@@ -100,7 +100,7 @@ Iron Rules API running on port 3000
 }
 ```
 ### 3. Rule 3: Error Contract (Zod/Middleware Layer)
-**Goal:** Prove all errors follow the mandatory JSON format with the `layer` field.
+**Goal:** Prove all errors follow the mandatory JSON  format with the `layer` field.
 
 **Action:** Send a POST request to `/api/gyms` with an invalid (0) capacity.
 
