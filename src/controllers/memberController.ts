@@ -12,7 +12,11 @@ export const enrollMember = async (req: Request, res: Response, next: NextFuncti
       const currentCount = await tx.enrollment.count({ where: { gymId } });
 
       if (!gym) throw new Error('Gym not found');
-      if (currentCount >= gym.capacity) throw new Error('Gym is full');
+      if (currentCount >= gym.capacity) {
+  const error = new Error('Gym has reached maximum capacity');
+  (error as any).statusCode = 400; // This tells the middleware it's a client error
+  throw error;
+}
 
       return tx.enrollment.create({
         data: { memberId, gymId, membershipTier }

@@ -11,7 +11,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/fitness?schema=public
       - NODE_ENV=production
-    command: npm run start
+    # Automates schema push and seeding before starting the API server
+    command: sh -c "npx prisma db push && npm run seed && npm run start"
 
   db:
     image: postgres:14
@@ -24,7 +25,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./prisma/seed.sql:/docker-entrypoint-initdb.d/seed.sql # For initial data seeding
+      # Mounts the seed file for the Postgres initialization script
+      - ./prisma/seed.sql:/docker-entrypoint-initdb.d/seed.sql 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d fitness"]
       interval: 10s
